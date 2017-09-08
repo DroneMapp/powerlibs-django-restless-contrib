@@ -8,7 +8,7 @@ def test_paginated_endpoint_mixin(paginated_endpoint):
 
     response = paginated_endpoint.get(mocked_request)
 
-    assert response['total'] == 5
+    assert response['total'] == 6
     assert response['count'] == 2
 
     assert response['results'][0].id == 2
@@ -46,7 +46,11 @@ def test_soft_deletable_list_endpoint(soft_deletable_list_endpoint):
     assert qs.count() == 3
     assert qs[0].deleted is False
     assert qs[1].deleted is False
-    assert qs[2].deleted is False
+
+
+def test_not_found_the_field_deleted_on_dict(soft_deletable_list_endpoint_no_field_deleted):
+    qs = soft_deletable_list_endpoint_no_field_deleted
+    assert 'deleted' not in dir(qs[0])
 
 
 def test_ordered_list_endpoint(ordered_list_endpoint):
@@ -66,7 +70,6 @@ def test_ordered_list_endpoint_with_invalid_field_name(ordered_list_endpoint):
     }
 
     mocked_request = mock.Mock(GET=get_parameters)
-
     response = ordered_list_endpoint.get_query_set(mocked_request)
 
     assert isinstance(response, Http400)
