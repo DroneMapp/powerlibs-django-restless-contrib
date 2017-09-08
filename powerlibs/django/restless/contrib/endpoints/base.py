@@ -71,6 +71,40 @@ class FilteredEndpointMixin:
 
 
 class SoftDeletableDetailEndpointMixin:
+    def serialize(self, data):
+        data = super().serialize(data)
+        if 'deleted' in data:
+            del data['deleted']
+
+        return data
+
+    def put(self, request, *args, **kwargs):
+
+        result = self.model.objects.filter(pk=kwargs['pk']).first()
+
+        if result is not None:
+            for field_name in ('deleted', 'updated_at', 'created_at', 'created_by'):
+                if field_name in request.data:
+                    return Http400({"error": "Invalid field name: {}".format(field_name)})
+
+            request.data['created_by'] = result.created_by_id
+
+            return super().put(request, *args, **kwargs)
+
+        for field_name in ('deleted', 'updated_at', 'created_at'):
+            if field_name in request.data:
+                return Http400({"error": "Invalid field name: {}".format(field_name)})
+
+            return super().put(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+
+        for field_name in ('deleted', 'created_by', 'updated_at', 'created_at'):
+            if field_name in request.data:
+                return Http400({"error": "Invalid field name: {}".format(field_name)})
+
+        return super().patch(request, *args, **kwargs)
+
     def delete(self, request, *args, **kwargs):
         instance = self.get_instance(request, *args, **kwargs)
 
@@ -83,6 +117,29 @@ class SoftDeletableDetailEndpointMixin:
 
 
 class SoftDeletableListEndpointMixin:
+    def post(self, request, *args, **kwargs):
+
+        for field_name in ('deleted', 'updated_at', 'created_at'):
+            if field_name in request.data:
+                return Http400({"error": "Invalid field name: {}".format(field_name)})
+
+        return super().post(request, *args, **kwargs)
+
+    def serialize(self, data):
+        data = super().serialize(data)
+
+        if data is not None:
+            if type(data) is list:
+                for result in data:
+                    if 'deleted' in result:
+                        del result['deleted']
+                return data
+
+            if 'deleted' in data:
+                del data['deleted']
+
+        return data
+
     def get_query_set(self, request, *args, **kwargs):
         queryset = super().get_query_set(request, *args, **kwargs)
         return queryset.filter(deleted=False)
