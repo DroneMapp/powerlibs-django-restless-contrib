@@ -2,6 +2,17 @@ from django.conf import settings
 from django.core.exceptions import FieldError
 
 from powerlibs.django.restless.http import Http400
+from powerlibs.django.restless.models import serialize
+
+
+def block_fields(fields):
+    def new_method(method):
+        def request(self, request, *args, **kwargs):
+            for field in fields:
+                if field in request.data:
+                    return Http400({"error": "Invalid field name: {}".format(field)})
+        return method(self, request, *args, **kwargs)
+    return new_method
 
 
 class PaginatedEndpointMixin:
@@ -71,6 +82,18 @@ class FilteredEndpointMixin:
 
 
 class SoftDeletableDetailEndpointMixin:
+
+    def serialize(self, data):
+        return serialize(data, exclude=['deleted'])
+
+    @block_fields(('deleted',))
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
+
+    @block_fields(('deleted',))
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
+
     def delete(self, request, *args, **kwargs):
         instance = self.get_instance(request, *args, **kwargs)
 
@@ -83,6 +106,14 @@ class SoftDeletableDetailEndpointMixin:
 
 
 class SoftDeletableListEndpointMixin:
+
+    @block_fields(('deleted',))
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+    def serialize(self, data):
+        return serialize(data, exclude=['deleted'])
+
     def get_query_set(self, request, *args, **kwargs):
         queryset = super().get_query_set(request, *args, **kwargs)
         return queryset.filter(deleted=False)

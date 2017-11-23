@@ -58,6 +58,7 @@ def instances():
         mock.Mock(id=3, deleted=False),
         mock.Mock(id=4, deleted=True),
         mock.Mock(id=5, deleted=True),
+        mock.Mock(id=7, deleted=True),
     )
 
 
@@ -159,9 +160,20 @@ def soft_deletable_detail_endpoint_with_deleted_instance():
 def soft_deletable_list_endpoint():
     class MyClass(SoftDeletableListEndpointMixin, Endpoint):
         pass
-
     obj = MyClass()
     return obj
+
+
+@pytest.fixture
+def soft_deletable_list_endpoint_no_field_deleted():
+    class MyClass(SoftDeletableListEndpointMixin, Endpoint):
+        pass
+
+    obj = MyClass()
+    data = obj.get_query_set(None)
+    for d in data:
+        del d.__dict__['deleted']
+    return data
 
 
 @pytest.fixture
